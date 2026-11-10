@@ -103,6 +103,12 @@ def run():
                 d = classify(e.get("title", ""), e.get("summary", ""))
                 if not d.get("relevant") or not d.get("person") or d.get("stage") not in STAGES:
                     continue
+                txt = f'{e.get("title", "")} {e.get("summary", "")}'.lower()
+                # Zaštita: "osuđen" samo ako vest zaista govori o presudi/kazni, a ne o početku suđenja.
+                if d["stage"] == "osudjen":
+                    verdict = ("osuđen", "osudjen", "presud", "kazn", "godina zatvora", "godine zatvora")
+                    if not any(w in txt for w in verdict) or "počelo suđenje" in txt or "počinje suđenje" in txt:
+                        continue
                 ev_date = d.get("event_date") or (t.date().isoformat() if t else None)
                 if not ev_date:
                     continue
