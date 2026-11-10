@@ -100,7 +100,10 @@ def run():
                     continue  # starije od datuma promene vlasti
                 if db.table("event_sources").select("url").eq("url", url).execute().data:
                     continue
+                if db.table("seen_urls").select("url").eq("url", url).execute().data:
+                    continue  # već pročitano (i ocenjeno kao nebitno), ne plaćamo AI ponovo
                 d = classify(e.get("title", ""), e.get("summary", ""))
+                db.table("seen_urls").upsert({"url": url}, on_conflict="url").execute()
                 if not d.get("relevant") or not d.get("person") or d.get("stage") not in STAGES:
                     continue
                 txt = f'{e.get("title", "")} {e.get("summary", "")}'.lower()
@@ -137,6 +140,10 @@ def run():
                 # Push (Firebase) se šalje tek kad review_state postane 'approved'.
             except Exception as ex:
                 print("entry error", url if 'url' in dir() else "?", ex)
+                try:
+                    db.table("seen_urls").delete().eq("url", url).execute()  # greška: probaćemo ponovo sledeći put
+                except Exception:
+                    pass
 
 
 if __name__ == "__main__":
